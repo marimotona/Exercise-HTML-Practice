@@ -1,16 +1,23 @@
 use crate::dom::{AttrMap, Element, Node};
 use combine::error::ParseError;
-use combine::parser::char::char;
-use combine::{parser, Parser, Stream};
+//use combine::parser::byte::letter;
+//use combine::parser::byte::alpha_num;
+use combine::parser::char::{char, space, newline, letter};
+use combine::{parser, Parser, Stream, between, satisfy, many, many1, sep_by};
 
-/// `attribute` consumes `name="value"`.
 fn attribute<Input>() -> impl Parser<Input, Output = (String, String)>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    todo!("you need to implement this combinator");
-    (char(' ')).map(|_| ("".to_string(), "".to_string()))
+    (
+        many1::<String, _, _>(letter().map(|c| c.to_string())), // まずは属性の名前を何文字か読む
+        many::<String, _, _>(space().or(newline())), // 空白と改行を読み飛ばす
+        char('='), // = を読む
+        many::<String, _, _>(space().or(newline())), // 空白と改行を読み飛ばす
+        between(char('"'), char('"'), many1::<String, _, _>(satisfy(|c: char| c != '"'))), // 引用符の間の、引用符を含まない文字を読む
+    )
+        .map(|v| (v.0, v.4)) // はじめに読んだ属性の名前と、最後に読んだ引用符の中の文字列を結果として返す
 }
 
 /// `attributes` consumes `name1="value1" name2="value2" ... name="value"`
@@ -19,8 +26,19 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    todo!("you need to implement this combinator");
-    (char(' ')).map(|_| AttrMap::new())
+    //     .map(|_| AttrMap::new())
+    sep_by::<Vec<_>, _, _, _>(
+        attribute(),
+        many::<String, _, _>(space().or(newline())),
+    )
+    .map(|attrs| {
+        let mut attr_map = AttrMap::new();
+        for (name, value) in attrs {
+            attr_map.insert(name, value);
+        }
+        attr_map
+    })
+    //(char(' ')).map(|_| AttrMap::new())
 }
 
 /// `open_tag` consumes `<tag_name attr_name="attr_value" ...>`.
