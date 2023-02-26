@@ -2,7 +2,7 @@ use crate::dom::{AttrMap, Element, Node};
 use combine::error::ParseError;
 //use combine::parser::byte::letter;
 //use combine::parser::byte::alpha_num;
-use combine::parser::char::{char, space, newline, letter};
+use combine::parser::char::{char, space, newline, letter, string};
 use combine::{parser, Parser, Stream, between, satisfy, many, many1, sep_by};
 
 fn attribute<Input>() -> impl Parser<Input, Output = (String, String)>
@@ -63,8 +63,7 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    todo!("you need to implement this combinator");
-    (char(' ')).map(|_| ("".to_string()))
+    between(string("</"), string(">"), many::<String, _, _>(letter()).map(|v| v.chars().collect::<String>()))
 }
 
 // `nodes_` (and `nodes`) tries to parse input as Element or Text.
